@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Nexotizzy AI - Central de Inteligência</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --border-color: #334155;
+            --danger-color: #ef4444;
+        }
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --surface-color: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-color: #059669;
+            --border-color: #e2e8f0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-primary); height: 100vh; overflow: hidden; transition: 0.3s; }
+
+        /* ============ AUTH SCREEN ============ */
+        .auth-screen { display: none; width: 100%; height: 100%; justify-content: center; align-items: center; padding: 20px; }
+        .auth-screen.show { display: flex; }
+        .auth-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .auth-logo { font-size: 28px; font-weight: bold; color: var(--accent-color); text-align: center; margin-bottom: 25px; letter-spacing: 1px; }
+        .auth-form { display: none; }
+        .auth-form.active { display: flex; flex-direction: column; gap: 12px; }
+        .auth-form h2 { font-size: 22px; margin-bottom: 8px; }
+        .auth-form label { font-size: 13px; color: var(--text-secondary); margin-top: 8px; font-weight: 500; }
+        .auth-form input { width: 100%; padding: 12px 14px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; outline: none; font-size: 14px; }
+        .auth-form input:focus { border-color: var(--accent-color); }
+        .auth-btn { background: var(--accent-color); color: #fff; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 6px; }
+        .auth-btn:hover { background: var(--accent-hover); }
+        .auth-divider { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 12px; margin: 12px 0; }
+        .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .auth-social { display: flex; justify-content: center; gap: 15px; margin: 14px 0; }
+        .social-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-color); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: 0.2s; text-decoration: none; }
+        .social-btn:hover { background: var(--border-color); transform: scale(1.1); }
+        .social-btn.facebook { color: #1877f2; }
+        .social-btn.google { color: #4285f4; }
+        .auth-link { text-align: center; margin-top: 14px; font-size: 13px; color: var(--text-secondary); }
+        .auth-link a { color: var(--accent-color); text-decoration: none; font-weight: 600; cursor: pointer; }
+        .auth-error { color: var(--danger-color); font-size: 12px; text-align: center; margin-top: 10px; min-height: 16px; }
+
+        /* ============ APP SCREEN (mobile app shell) ============ */
+        .app-screen { display: none; width: 100%; height: 100%; flex-direction: column; }
+        .app-screen.show { display: flex; }
+        .app-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+        /* Top app bar (Android-style) */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; min-height: 0; }
+        .header {
+            padding-top: env(safe-area-inset-top, 0px);
+            height: calc(56px + env(safe-area-inset-top, 0px));
+            display: flex; justify-content: space-between; align-items: center;
+            padding-left: 12px; padding-right: 8px;
+            background: var(--surface-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            flex-shrink: 0; position: relative; z-index: 20;
+        }
+        .app-title { font-size: 17px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+        .app-title i { color: var(--accent-color); }
+        .model-selector { background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color); padding: 9px 8px; border-radius: 8px; outline: none; font-size: 13px; max-width: 190px; text-overflow: ellipsis; }
+        .header-actions { display: flex; align-items: center; gap: 4px; }
+        .header-actions button { background: none; border: none; color: var(--text-primary); font-size: 19px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .header-actions button:active { background: var(--border-color); }
+
+        .view-section { display: none; flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; position: relative; }
+        .view-section.active { display: flex; flex-direction: column; }
+
+        /* Itens de navegação (Chat/Histórico/Vídeos) dentro do menu de três pontinhos */
+        .menu-tab-btn.active { color: var(--accent-color); font-weight: 600; }
+        .menu-tab-btn.active i { color: var(--accent-color); }
+
+        .chat-container { flex-grow: 1; overflow-y: auto; padding-bottom: 80px; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 85%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; }
+        .msg-user { align-self: flex-end; background: var(--accent-color); color: #fff; border-bottom-right-radius: 2px; }
+        .msg-ai { align-self: flex-start; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary); border-bottom-left-radius: 2px; }
+        .msg-image { max-width: 100%; border-radius: 8px; margin-bottom: 6px; display: block; }
+        .msg-file { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.15); padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+
+        .attachment-preview { display: none; position: absolute; bottom: 75px; left: 0; right: 0; background: var(--surface-color); border-top: 1px solid var(--border-color); padding: 10px 20px; align-items: center; justify-content: space-between; gap: 10px; z-index: 5; }
+        .attachment-chip { display: flex; align-items: center; gap: 10px; color: var(--text-primary); font-size: 13px; }
+        .attachment-chip img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; }
+        .remove-attachment { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; }
+
+        .input-area { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px 20px; background: var(--surface-color); border-top: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; }
+        .input-area input { flex-grow: 1; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px 15px; border-radius: 25px; outline: none; font-size: 14px; }
+        .action-btn { background: var(--accent-color); color: #fff; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: 0.2s; flex-shrink: 0; }
+        .action-btn:hover { background: var(--accent-hover); }
+        .tool-btn { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; flex-shrink: 0; }
+
+        .btn-secondary { background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 10px 15px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .btn-primary { background: var(--accent-color); border: none; color: #fff; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
+
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }
+        .history-list { flex-grow: 1; overflow-y: auto; }
+        .history-item { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; position: relative; overflow: hidden; }
+        .history-item::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 0%; background: rgba(239, 68, 68, 0.35); z-index: 0; }
+        .history-item.holding::before { width: 100%; transition: width 3s linear; }
+        .history-info { position: relative; z-index: 1; }
+        .history-title { font-weight: 600; margin-bottom: 4px; }
+        .history-date { font-size: 12px; color: var(--text-secondary); }
+        .history-empty { text-align: center; color: var(--text-secondary); margin-top: 40px; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: flex-end; z-index: 1000; }
+        .modal-content {
+            background: var(--surface-color); padding: 10px 22px 22px;
+            border-radius: 20px 20px 0 0; width: 100%; max-width: 480px;
+            border: 1px solid var(--border-color); border-bottom: none;
+            padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+            animation: sheet-up 0.22s ease-out;
+        }
+        .sheet-handle { width: 40px; height: 4px; background: var(--border-color); border-radius: 3px; margin: 0 auto 16px; }
+        @keyframes sheet-up { from { transform: translateY(30px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
+        .modal-content h3 { margin-bottom: 15px; }
+        .modal-content label { display: block; margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+        .modal-content input { width: 100%; padding: 12px; margin-top: 5px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 14px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+        .header-menu button, .header-menu a { min-height: 48px; }
+        .header-menu button:active, .header-menu a:active { background: var(--bg-color); }
+
+        .auth-screen { padding-top: env(safe-area-inset-top, 20px); padding-bottom: env(safe-area-inset-bottom, 20px); }
+    </style>
+</head>
+
+<body>
+
+    <!-- ============ TELA DE LOGIN / CRIAR CONTA ============ -->
+    <div class="auth-screen show" id="authScreen">
+        <div class="auth-card">
+            <div class="auth-logo"><i class="fa-solid fa-microchip"></i> Nexotizzy AI</div>
+
+            <!-- LOGIN -->
+            <div class="auth-form active" id="loginForm">
+                <h2>Entrar</h2>
+                <label>E-mail</label>
+                <input type="email" id="loginEmail" placeholder="seu@email.com">
+                <label>Senha</label>
+                <input type="password" id="loginPassword" placeholder="Sua senha">
+                <button type="button" class="auth-btn" id="btnLogin">Entrar</button>
+
+                <div class="auth-divider">ou</div>
+
+                <div class="auth-social">
+                    <a href="https://www.facebook.com/share/1HJfU2yMWu/" target="_blank" rel="noopener noreferrer" class="social-btn facebook" title="Visite nosso Facebook">
+                        <i class="fa-brands fa-facebook-f"></i>
+                    </a>
+                    <div class="social-btn google" id="googleBtnLogin" title="Login com Google"></div>
+                </div>
+
+                <div class="auth-link">
+                    Não tem conta? <a onclick="switchAuthForm('signupForm', 'loginForm')">Criar conta</a>
+                </div>
+                <div class="auth-link">
+                    <a onclick="switchAuthForm('forgotForm', 'loginForm')">Esqueci minha senha</a>
+                </div>
+                <div class="auth-error" id="loginError"></div>
+            </div>
+
+            <!-- CRIAR CONTA -->
+            <div class="auth-form" id="signupForm">
+                <h2>Criar Conta</h2>
+                <label>Nome Completo</label>
+                <input type="text" id="signupName" placeholder="Seu nome">
+                <label>E-mail</label>
+                <input type="email" id="signupEmail" placeholder="seu@email.com">
+                <label>Senha (mín. 6 caracteres)</label>
+                <input type="password" id="signupPassword" placeholder="Crie uma senha">
+                <label>Confirmar Senha</label>
+                <input type="password" id="signupPasswordConfirm" placeholder="Repita a senha">
+                <button type="button" class="auth-btn" id="btnSignup">Criar conta</button>
+                <div class="auth-link">
+                    Já tem conta? <a onclick="switchAuthForm('loginForm', 'signupForm')">Entrar</a>
+                </div>
+                <div class="auth-error" id="signupError"></div>
+            </div>
+
+            <!-- ESQUECI SENHA -->
+            <div class="auth-form" id="forgotForm">
+                <h2>Recuperar Senha</h2>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">Informe seu e-mail para receber um código de recuperação.</p>
+                <label>E-mail</label>
+                <input type="email" id="forgotEmail" placeholder="seu@email.com">
+                <button type="button" class="auth-btn" id="btnSendCode">Enviar código</button>
+                <div class="auth-link">
+                    <a onclick="switchAuthForm('loginForm', 'forgotForm')">Voltar ao login</a>
+                </div>
+                <div class="auth-error" id="forgotError"></div>
+            </div>
+
+            <!-- REDEFINIR SENHA -->
+            <div class="auth-form" id="resetForm">
+                <h2>Redefinir Senha</h2>
+                <label>Código (recebido por e-mail)</label>
+                <input type="text" id="resetCode" placeholder="000000">
+                <label>Nova Senha</label>
+                <input type="password" id="resetNewPass" placeholder="Nova senha">
+                <label>Confirmar Nova Senha</label>
+                <input type="password" id="resetNewPassConfirm" placeholder="Repita a nova senha">
+                <button type="button" class="auth-btn" id="btnResetPassword">Salvar nova senha</button>
+                <div class="auth-error" id="resetError"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ APP PRINCIPAL ============ -->
+    <div class="app-screen" id="appScreen">
+        <div class="app-container">
+            <div class="main-content">
+                <div class="header">
+                    <div class="app-title" id="headerTitle">
+                        <select class="model-selector" id="modelSelect">
+                            <option value="groq">Llama 3.3 70B (Groq)</option>
+                            <option value="openrouter">Gemini Flash (OpenRouter)</option>
+                            <option value="openai">GPT-4o-mini (OpenAI)</option>
+                        </select>
+                    </div>
+                    <div class="header-actions">
+                        <button onclick="toggleTheme()"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
+                        <div style="position: relative;">
+                            <button onclick="toggleHeaderMenu()"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            <div class="header-menu" id="headerMenu" style="display: none; position: absolute; right: 0; top: 45px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; min-width: 210px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; overflow: hidden;">
+                                <button onclick="switchTab('chat', this); document.getElementById('headerMenu').style.display='none';" class="menu-tab-btn active" data-tab="chat" style="width: 100%; text-align: left; background: none; border: none; padding: 12px 15px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-comment-dots"></i> Chat
+                                </button>
+                                <button onclick="switchTab('historico', this); document.getElementById('headerMenu').style.display='none';" class="menu-tab-btn" data-tab="historico" style="width: 100%; text-align: left; background: none; border: none; padding: 12px 15px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> Histórico
+                                </button>
+                                <button onclick="switchTab('videos', this); document.getElementById('headerMenu').style.display='none';" class="menu-tab-btn" data-tab="videos" style="width: 100%; text-align: left; background: none; border: none; padding: 12px 15px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-clapperboard"></i> Vídeos
+                                </button>
+                                <a href="https://www.facebook.com/share/1HJfU2yMWu/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; color: #1877f2; text-decoration: none; border-bottom: 1px solid var(--border-color);">
+                                    <i class="fa-brands fa-facebook-f"></i> Visite nosso Facebook
+                                </a>
+                                <button onclick="openSettings()" style="width: 100%; text-align: left; background: none; border: none; padding: 12px 15px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-gear"></i> Configurações API
+                                </button>
+                                <button onclick="doLogout()" style="width: 100%; text-align: left; background: none; border: none; padding: 12px 15px; color: var(--danger-color); cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                    <i class="fa-solid fa-right-from-bracket"></i> Sair
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="chat" class="view-section active">
+                    <div class="chat-container" id="chatBox">
+                        <div class="message msg-ai">Olá! Sou o Nexotizzy AI. Como posso te ajudar com código, estudos ou negócios?</div>
+                    </div>
+                    <input type="file" id="fileInput" style="display:none">
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+                    <div class="attachment-preview" id="attachmentPreview">
+                        <div class="attachment-chip" id="attachmentChip"></div>
+                        <button class="remove-attachment" onclick="removeAttachment()">&times;</button>
+                    </div>
+                    <div class="input-area">
+                        <button type="button" class="tool-btn" id="btnAttach"><i class="fa-solid fa-paperclip"></i></button>
+                        <button type="button" class="tool-btn" id="btnCamera"><i class="fa-solid fa-camera"></i></button>
+                        <input type="text" id="userInput" placeholder="Digite sua mensagem...">
+                        <button type="button" class="action-btn" id="btnSend"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+
+                <div id="historico" class="view-section">
+                    <div class="history-header">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> Histórico</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="https://www.facebook.com/share/1HJfU2yMWu/" target="_blank" rel="noopener noreferrer" class="btn-secondary" title="Visite nossa página no Facebook">
+                                <i class="fa-brands fa-facebook-f"></i>
+                            </a>
+                            <button type="button" class="btn-secondary" id="btnNewConv"><i class="fa-solid fa-plus"></i> Nova</button>
+                        </div>
+                    </div>
+                    <div id="historyList" class="history-list"></div>
+                </div>
+
+                <div id="videos" class="view-section">
+                    <div class="history-header">
+                        <h2><i class="fa-solid fa-clapperboard"></i> Vídeos IA</h2>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display:block; font-size:13px; color: var(--text-secondary); margin-bottom:6px;">Roteiro do vídeo</label>
+                        <textarea id="arcadsScriptText" rows="4" placeholder="Cole aqui o texto que o ator de IA vai falar no vídeo..." style="width:100%; padding:10px; background: var(--bg-color); border:1px solid var(--border-color); color: var(--text-primary); border-radius:8px; resize:vertical; font-family: inherit; box-sizing: border-box; font-size: 14px;"></textarea>
+                        <button type="button" class="btn-primary" id="btnArcadsGenerate" onclick="generateArcadsVideo()"><i class="fa-solid fa-clapperboard"></i> Gerar vídeo</button>
+                    </div>
+                    <div id="arcadsVideoList" class="history-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="sheet-handle"></div>
+            <h3>Configurações - API Keys</h3>
+            <label>Groq API Key</label>
+            <input type="password" id="groqKey" placeholder="gsk_...">
+            <label>OpenRouter API Key</label>
+            <input type="password" id="openRouterKey" placeholder="sk-or-v1-...">
+            <label>OpenAI API Key</label>
+            <input type="password" id="openaiKey" placeholder="sk-proj-...">
+            <label>Arcads Client ID</label>
+            <input type="text" id="arcadsClientId" placeholder="Client ID (Settings > Public API no Arcads)">
+            <label>Arcads Client Secret</label>
+            <input type="password" id="arcadsClientSecret" placeholder="Client Secret">
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeSettings()">Cancelar</button>
+                <button type="button" class="btn-primary" style="margin-top: 0; width: auto;" onclick="saveKeys()">Salvar</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ========== OTIMIZAÇÃO PARA CONEXÕES LENTAS (Vodacom, Movitel, mCel) ==========
+        const MAX_IMAGE_SIZE = 300;
+        const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+
+        async function compressImage(dataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) {
+                        const ratio = Math.min(MAX_IMAGE_SIZE / width, MAX_IMAGE_SIZE / height);
+                        width = Math.floor(width * ratio);
+                        height = Math.floor(height * ratio);
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        // ========== CONTAS (Login/Signup) ==========
+        async function hashPassword(pass) {
+            const enc = new TextEncoder().encode(pass);
+            const buf = await crypto.subtle.digest('SHA-256', enc);
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function getAccounts() {
+            return JSON.parse(localStorage.getItem('nexotizzy_accounts') || '[]');
+        }
+
+        function saveAccounts(accounts) {
+            localStorage.setItem('nexotizzy_accounts', JSON.stringify(accounts));
+        }
+
+        function getCurrentUser() {
+            return localStorage.getItem('nexotizzy_user');
+        }
+
+        function setCurrentUser(email) {
+            localStorage.setItem('nexotizzy_user', email);
+        }
+
+        function switchAuthForm(toForm, fromForm) {
+            document.getElementById(fromForm).classList.remove('active');
+            document.getElementById(toForm).classList.add('active');
+            document.querySelectorAll('.auth-error').forEach(e => e.textContent = '');
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPassword').value;
+            const err = document.getElementById('loginError');
+            err.textContent = '';
+
+            if (!email || !pass) {
+                err.textContent = 'Preencha e-mail e senha';
+                return;
+            }
+
+            const accounts = getAccounts();
+            const acc = accounts.find(a => a.email === email);
+            if (!acc) {
+                err.textContent = 'E-mail não encontrado';
+                return;
+            }
+
+            const hash = await hashPassword(pass);
+            if (acc.passwordHash !== hash) {
+                err.textContent = 'Senha incorreta';
+                return;
+            }
+
+            setCurrentUser(email);
+            showApp();
+        }
+
+        async function handleSignup() {
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+            const pass = document.getElementById('signupPassword').value;
+            const passConfirm = document.getElementById('signupPasswordConfirm').value;
+            const err = document.getElementById('signupError');
+            err.textContent = '';
+
+            if (!name || !email || !pass) {
+                err.textContent = 'Preencha todos os campos';
+                return;
+            }
+            if (pass.length < 6) {
+                err.textContent = 'Senha deve ter no mínimo 6 caracteres';
+                return;
+            }
+            if (pass !== passConfirm) {
+                err.textContent = 'Senhas não coincidem';
+                return;
+            }
+
+            const accounts = getAccounts();
+            if (accounts.find(a => a.email === email)) {
+                err.textContent = 'E-mail já cadastrado';
+                return;
+            }
+
+            const hash = await hashPassword(pass);
+            accounts.push({
+                email,
+                name,
+                passwordHash: hash,
+                provider: 'local',
+                createdAt: Date.now()
+            });
+            saveAccounts(accounts);
+            setCurrentUser(email);
+            showApp();
+        }
+
+        async function handleSendCode() {
+            const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+            const err = document.getElementById('forgotError');
+            err.textContent = '';
+
+            if (!email) {
+                err.textContent = 'Informe seu e-mail';
+                return;
+            }
+
+            const accounts = getAccounts();
+            if (!accounts.find(a => a.email === email)) {
+                err.textContent = 'E-mail não encontrado';
+                return;
+            }
+
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            localStorage.setItem('nexotizzy_reset', JSON.stringify({
+                email, code, expiresAt: Date.now() + 15 * 60 * 1000
+            }));
+
+            alert(`🔐 Código: ${code}\n\n(Se EmailJS estivesse configurado, seria enviado por e-mail)`);
+            switchAuthForm('resetForm', 'forgotForm');
+        }
+
+        async function handleResetPassword() {
+            const code = document.getElementById('resetCode').value.trim();
+            const newPass = document.getElementById('resetNewPass').value;
+            const newPassConfirm = document.getElementById('resetNewPassConfirm').value;
+            const err = document.getElementById('resetError');
+            err.textContent = '';
+
+            if (!code || !newPass) {
+                err.textContent = 'Preencha todos os campos';
+                return;
+            }
+
+            const reset = JSON.parse(localStorage.getItem('nexotizzy_reset') || 'null');
+            if (!reset || reset.code !== code || Date.now() > reset.expiresAt) {
+                err.textContent = 'Código inválido ou expirado';
+                return;
+            }
+
+            if (newPass.length < 6) {
+                err.textContent = 'Senha deve ter no mínimo 6 caracteres';
+                return;
+            }
+
+            if (newPass !== newPassConfirm) {
+                err.textContent = 'Senhas não coincidem';
+                return;
+            }
+
+            const accounts = getAccounts();
+            const acc = accounts.find(a => a.email === reset.email);
+            if (!acc) {
+                err.textContent = 'Conta não encontrada';
+                return;
+            }
+
+            const hash = await hashPassword(newPass);
+            acc.passwordHash = hash;
+            saveAccounts(accounts);
+            localStorage.removeItem('nexotizzy_reset');
+
+            alert('✅ Senha redefinida com sucesso!');
+            switchAuthForm('loginForm', 'resetForm');
+        }
+
+        function handleGoogleLogin(response) {
+            try {
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const payload = JSON.parse(atob(base64));
+                const email = payload.email.toLowerCase();
+                const name = payload.name;
+
+                let accounts = getAccounts();
+                let acc = accounts.find(a => a.email === email);
+                if (!acc) {
+                    acc = { email, name, passwordHash: null, provider: 'google', createdAt: Date.now() };
+                    accounts.push(acc);
+                    saveAccounts(accounts);
+                }
+
+                setCurrentUser(email);
+                showApp();
+            } catch (e) {
+                document.getElementById('loginError').textContent = 'Erro ao entrar com Google';
+            }
+        }
+
+        function initGoogleSignIn() {
+            if (typeof google === 'undefined') return;
+            const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+            if (GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) return;
+
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleLogin
+            });
+
+            const btn = document.getElementById('googleBtnLogin');
+            if (btn) {
+                google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large' });
+            }
+        }
+
+        function showAuth() {
+            document.getElementById('authScreen').classList.add('show');
+            document.getElementById('appScreen').classList.remove('show');
+            initGoogleSignIn();
+        }
+
+        function showApp() {
+            document.getElementById('authScreen').classList.remove('show');
+            document.getElementById('appScreen').classList.add('show');
+            initApp();
+        }
+
+        function doLogout() {
+            localStorage.removeItem('nexotizzy_user');
+            location.reload();
+        }
+
+        // ========== THEME ==========
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') !== 'light';
+            if (isDark) {
+                document.body.setAttribute('data-theme', 'light');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun';
+            } else {
+                document.body.removeAttribute('data-theme');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon';
+            }
+        }
+
+        // ========== NAVIGATION ==========
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.menu-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            const menuBtn = btn || document.querySelector(`.menu-tab-btn[data-tab="${tabId}"]`);
+            if (menuBtn) menuBtn.classList.add('active');
+            if (tabId === 'historico') renderHistory();
+            if (tabId === 'videos') renderArcadsVideoList();
+        }
+
+        function toggleHeaderMenu() {
+            const menu = document.getElementById('headerMenu');
+            if (menu.style.display === 'none') {
+                menu.style.display = 'block';
+            } else {
+                menu.style.display = 'none';
+            }
+        }
+
+        // ========== SETTINGS ==========
+        function openSettings() {
+            document.getElementById('groqKey').value = localStorage.getItem('groqKey') || '';
+            document.getElementById('openRouterKey').value = localStorage.getItem('openRouterKey') || '';
+            document.getElementById('openaiKey').value = localStorage.getItem('openaiKey') || '';
+            document.getElementById('arcadsClientId').value = localStorage.getItem('arcadsClientId') || '';
+            document.getElementById('arcadsClientSecret').value = localStorage.getItem('arcadsClientSecret') || '';
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function saveKeys() {
+            localStorage.setItem('groqKey', document.getElementById('groqKey').value);
+            localStorage.setItem('openRouterKey', document.getElementById('openRouterKey').value);
+            localStorage.setItem('openaiKey', document.getElementById('openaiKey').value);
+            localStorage.setItem('arcadsClientId', document.getElementById('arcadsClientId').value);
+            localStorage.setItem('arcadsClientSecret', document.getElementById('arcadsClientSecret').value);
+            closeSettings();
+            alert('✅ Chaves salvas!');
+        }
+
+        // ========== ARCADS AI (geração de vídeo) ==========
+        // ATENÇÃO: o Client Secret fica salvo no localStorage do dispositivo, assim como as
+        // outras chaves de API deste app. Isso é aceitável para uso pessoal/single-user no
+        // WebView, mas não publique este app com suas credenciais reais embutidas.
+        const ARCADS_API_BASE = 'https://external-api.arcads.ai/v1';
+
+        function getArcadsAuthHeader() {
+            const clientId = localStorage.getItem('arcadsClientId') || '';
+            const clientSecret = localStorage.getItem('arcadsClientSecret') || '';
+            return 'Basic ' + btoa(`${clientId}:${clientSecret}`);
+        }
+
+        async function arcadsRequest(path, method = 'GET', body = null) {
+            const opts = {
+                method,
+                headers: {
+                    'Authorization': getArcadsAuthHeader(),
+                    'Content-Type': 'application/json'
+                }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(ARCADS_API_BASE + path, opts);
+            if (!res.ok) {
+                const errText = await res.text().catch(() => '');
+                throw new Error(`Arcads ${res.status}: ${errText || res.statusText}`);
+            }
+            return res.status === 204 ? null : res.json();
+        }
+
+        // Cria (uma vez) e reutiliza um Product + Folder padrão para os vídeos do Nexotizzy
+        async function ensureArcadsSetup() {
+            let productId = localStorage.getItem('arcadsProductId');
+            let folderId = localStorage.getItem('arcadsFolderId');
+
+            if (!productId) {
+                const product = await arcadsRequest('/products', 'POST', { name: 'Nexotizzy AI' });
+                productId = product.id || product.productId;
+                localStorage.setItem('arcadsProductId', productId);
+            }
+            if (!folderId) {
+                const folder = await arcadsRequest('/folders', 'POST', { productId, name: 'Vídeos Nexotizzy' });
+                folderId = folder.id || folder.folderId;
+                localStorage.setItem('arcadsFolderId', folderId);
+            }
+            return { productId, folderId };
+        }
+
+        function getArcadsVideos() {
+            return JSON.parse(localStorage.getItem('nexotizzy_arcads_videos_' + getCurrentUser()) || '[]');
+        }
+        function saveArcadsVideos(list) {
+            localStorage.setItem('nexotizzy_arcads_videos_' + getCurrentUser(), JSON.stringify(list));
+        }
+
+        async function generateArcadsVideo() {
+            const clientId = localStorage.getItem('arcadsClientId');
+            const clientSecret = localStorage.getItem('arcadsClientSecret');
+            if (!clientId || !clientSecret) {
+                alert('⚠️ Configure suas credenciais do Arcads em Configurações antes de gerar vídeos.');
+                openSettings();
+                return;
+            }
+
+            const textInput = document.getElementById('arcadsScriptText');
+            const text = textInput.value.trim();
+            if (!text) { alert('Digite o roteiro do vídeo.'); return; }
+
+            const genBtn = document.getElementById('btnArcadsGenerate');
+            genBtn.disabled = true;
+            genBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+
+            try {
+                const { folderId } = await ensureArcadsSetup();
+
+                // NOTA: o campo "videos" no payload do script provavelmente referencia o(s)
+                // ator(es)/avatar(es) de IA da sua conta Arcads. O esquema exato não está
+                // documentado publicamente — confira em https://external-api.arcads.ai/docs
+                // (já logado na sua conta) e ajuste este array conforme necessário.
+                const script = await arcadsRequest('/scripts', 'POST', {
+                    folderId,
+                    name: text.slice(0, 40) || 'Roteiro Nexotizzy',
+                    text,
+                    videos: []
+                });
+                const scriptId = script.id || script.scriptId;
+
+                await arcadsRequest(`/scripts/${scriptId}/generate`, 'POST');
+
+                const videos = getArcadsVideos();
+                videos.unshift({ scriptId, text, status: 'processing', createdAt: Date.now(), url: null });
+                saveArcadsVideos(videos);
+                renderArcadsVideoList();
+                textInput.value = '';
+
+                pollArcadsVideo(scriptId);
+            } catch (err) {
+                alert('❌ Erro ao gerar vídeo: ' + err.message);
+            } finally {
+                genBtn.disabled = false;
+                genBtn.innerHTML = '<i class="fa-solid fa-clapperboard"></i> Gerar vídeo';
+            }
+        }
+
+        async function pollArcadsVideo(scriptId, attempt = 0) {
+            if (attempt > 40) return; // ~10 min tentando (a cada 15s)
+            try {
+                const data = await arcadsRequest(`/scripts/${scriptId}/videos`);
+                const item = Array.isArray(data) ? data[0] : data;
+                const status = (item && item.status) || 'processing';
+                const url = (item && (item.downloadUrl || item.url)) || null;
+
+                const videos = getArcadsVideos();
+                const idx = videos.findIndex(v => v.scriptId === scriptId);
+                if (idx !== -1) {
+                    videos[idx].status = status;
+                    videos[idx].url = url;
+                    saveArcadsVideos(videos);
+                    renderArcadsVideoList();
+                }
+
+                const finished = ['completed', 'ready', 'failed', 'error'].includes(status);
+                if (!finished) setTimeout(() => pollArcadsVideo(scriptId, attempt + 1), 15000);
+            } catch (err) {
+                setTimeout(() => pollArcadsVideo(scriptId, attempt + 1), 20000);
+            }
+        }
+
+        function renderArcadsVideoList() {
+            const container = document.getElementById('arcadsVideoList');
+            if (!container) return;
+            const videos = getArcadsVideos();
+            container.innerHTML = '';
+            if (videos.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary); text-align:center; margin-top: 20px;">Nenhum vídeo gerado ainda.</p>';
+                return;
+            }
+            const statusLabels = { processing: '⏳ Processando', ready: '✅ Pronto', completed: '✅ Pronto', failed: '❌ Falhou', error: '❌ Erro' };
+            videos.forEach(v => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                const label = statusLabels[v.status] || v.status;
+                const preview = v.text.length > 80 ? v.text.slice(0, 80) + '…' : v.text;
+                div.innerHTML = `
+                    <div style="position:relative; z-index:1;">
+                        <div style="font-size:14px; margin-bottom:6px;">${preview}</div>
+                        <div style="font-size:12px; color: var(--text-secondary);">${label}</div>
+                        ${v.url ? `<a href="${v.url}" target="_blank" class="btn-secondary" style="margin-top:8px; display:inline-flex;"><i class="fa-solid fa-download"></i> Baixar vídeo</a>` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ========== ATTACHMENTS ==========
+        let attachment = null;
+
+        function openCamera() { document.getElementById('cameraInput').click(); }
+        function openFile() { document.getElementById('fileInput').click(); }
+
+        async function handleAttachment(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            e.target.value = '';
+
+            if (file.size > MAX_ATTACHMENT_SIZE) {
+                alert(`📦 Arquivo muito grande (máx. 5MB). Tamanho: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                let data = ev.target.result;
+                let type = file.type.startsWith('image/') ? 'image' : 'file';
+
+                if (type === 'image' && file.size > 500000) {
+                    addMessage('ai', '📸 Comprimindo imagem para conexão lenta...');
+                    data = await compressImage(data);
+                }
+
+                attachment = {
+                    type,
+                    data,
+                    name: file.name,
+                    mime: file.type
+                };
+                showAttachmentPreview();
+            };
+            reader.onerror = () => {
+                alert('❌ Erro ao ler o arquivo. Tente novamente.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showAttachmentPreview() {
+            const bar = document.getElementById('attachmentPreview');
+            const chip = document.getElementById('attachmentChip');
+
+            if (!attachment) {
+                bar.style.display = 'none';
+                chip.innerHTML = '';
+                return;
+            }
+
+            if (attachment.type === 'image') {
+                chip.innerHTML = `<img src="${attachment.data}"><span>${attachment.name}</span>`;
+            } else {
+                let icon = 'fa-file';
+                if (attachment.mime.startsWith('video/')) icon = 'fa-file-video';
+                else if (attachment.mime.startsWith('audio/')) icon = 'fa-file-audio';
+                chip.innerHTML = `<i class="fa-solid ${icon}"></i><span>${attachment.name}</span>`;
+            }
+            bar.style.display = 'flex';
+        }
+
+        function removeAttachment() {
+            attachment = null;
+            showAttachmentPreview();
+        }
+
+        // ========== CHAT COM RETRY AUTOMÁTICO PARA CONEXÕES LENTAS ==========
+        function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+
+        async function sendMessage() {
+            const text = document.getElementById('userInput').value.trim();
+            if (!text && !attachment) return;
+
+            addMessage('user', text, attachment);
+            document.getElementById('userInput').value = '';
+            removeAttachment();
+
+            const model = document.getElementById('modelSelect').value;
+            let apiKey, endpoint, modelName;
+
+            if (model === 'groq') {
+                apiKey = localStorage.getItem('groqKey');
+                endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+                modelName = 'llama-3.3-70b-versatile';
+            } else if (model === 'openrouter') {
+                apiKey = localStorage.getItem('openRouterKey');
+                endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+                modelName = 'google/gemini-flash-1.5';
+            } else {
+                apiKey = localStorage.getItem('openaiKey');
+                endpoint = 'https://api.openai.com/v1/chat/completions';
+                modelName = 'gpt-4o-mini';
+            }
+
+            if (!apiKey) {
+                addMessage('ai', '⚠️ Configure sua API Key nos 3 pontinhos → Configurações API');
+                return;
+            }
+
+            if (attachment && attachment.type === 'image' && model === 'groq') {
+                addMessage('ai', '❌ Groq não lê imagens. Use OpenAI ou OpenRouter.');
+                return;
+            }
+
+            addMessage('ai', '⏳ Enviando... (Vodacom/Movitel/mCel pode ser mais lento)', null, 'loading');
+
+            let content;
+            if (attachment && attachment.type === 'image') {
+                content = [
+                    { type: 'text', text: text || 'Descreva isto.' },
+                    { type: 'image_url', image_url: { url: attachment.data } }
+                ];
+            } else if (attachment) {
+                content = `${text}\n[Anexo: ${attachment.name}]`;
+            } else {
+                content = text;
+            }
+
+            const maxRetries = 3;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: modelName,
+                            messages: [
+                                { role: 'system', content: 'Você é Nexotizzy AI, assistente de programação e estudos. Respostas diretas e úteis.' },
+                                { role: 'user', content }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 1000
+                        }),
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                    const data = await res.json();
+                    document.getElementById('loading')?.remove();
+
+                    if (data.choices?.[0]?.message?.content) {
+                        addMessage('ai', data.choices[0].message.content);
+                        return;
+                    } else {
+                        throw new Error('Resposta vazia');
+                    }
+                } catch (e) {
+                    const isLast = attempt === maxRetries;
+
+                    if (e.name === 'AbortError') {
+                        if (isLast) {
+                            document.getElementById('loading')?.remove();
+                            addMessage('ai', '⏱️ Conexão muito lenta (Vodacom/Movitel/mCel). Tente novamente com mais mega ou em outro horário.');
+                        } else {
+                            const loading = document.getElementById('loading');
+                            if (loading) loading.innerHTML = `<div>⏳ Tentativa ${attempt + 1}/${maxRetries}... (conexão lenta)</div>`;
+                            await new Promise(r => setTimeout(r, 2000 * attempt));
+                        }
+                    } else if (e.message.includes('HTTP 429')) {
+                        if (isLast) {
+                            document.getElementById('loading')?.remove();
+                            addMessage('ai', '⚠️ API em alta demanda. Aguarde alguns minutos e tente novamente.');
+                        } else {
+                            const loading = document.getElementById('loading');
+                            if (loading) loading.innerHTML = `<div>⏳ API sobrecarregada, tentativa ${attempt + 1}/${maxRetries}...</div>`;
+                            await new Promise(r => setTimeout(r, 3000 * attempt));
+                        }
+                    } else if (e.message.includes('HTTP 401')) {
+                        document.getElementById('loading')?.remove();
+                        addMessage('ai', '❌ API Key inválida. Verifique as configurações.');
+                        return;
+                    } else {
+                        if (isLast) {
+                            document.getElementById('loading')?.remove();
+                            addMessage('ai', `❌ Erro: ${e.message}. Verifique sua conexão (Vodacom/Movitel/mCel) e tente novamente.`);
+                        } else {
+                            const loading = document.getElementById('loading');
+                            if (loading) loading.innerHTML = `<div>⏳ Reconectando... tentativa ${attempt + 1}/${maxRetries}</div>`;
+                            await new Promise(r => setTimeout(r, 1500 * attempt));
+                        }
+                    }
+                }
+            }
+        }
+
+        function addMessage(from, text, att = null, id = null) {
+            const box = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = `message msg-${from}`;
+            if (id) div.id = id;
+
+            let html = '';
+            if (att?.type === 'image') {
+                html = `<img src="${att.data}" class="msg-image">`;
+            } else if (att) {
+                html = `<div class="msg-file"><i class="fa-solid fa-paperclip"></i>${att.name}</div>`;
+            }
+            if (text) html += `<div>${text.replace(/\n/g, '<br>')}</div>`;
+
+            div.innerHTML = html;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+
+            if (!id) saveMessage(from, text, att);
+        }
+
+        // ========== HISTÓRICO ==========
+        function getConvKey() {
+            return 'nexotizzy_conv_' + getCurrentUser();
+        }
+
+        function getConversations() {
+            return JSON.parse(localStorage.getItem(getConvKey()) || '[]');
+        }
+
+        function saveConversations(convs) {
+            localStorage.setItem(getConvKey(), JSON.stringify(convs));
+        }
+
+        function getCurrentConv() {
+            return localStorage.getItem('nexotizzy_current_conv_' + getCurrentUser());
+        }
+
+        function setCurrentConv(id) {
+            localStorage.setItem('nexotizzy_current_conv_' + getCurrentUser(), id);
+        }
+
+        function createConv() {
+            return {
+                id: 'c' + Date.now(),
+                title: 'Nova conversa',
+                created: Date.now(),
+                messages: []
+            };
+        }
+
+        function ensureConv() {
+            let convs = getConversations();
+            let id = getCurrentConv();
+            let conv = convs.find(c => c.id === id);
+            if (!conv) {
+                conv = createConv();
+                convs.push(conv);
+                saveConversations(convs);
+                setCurrentConv(conv.id);
+            }
+            return conv;
+        }
+
+        function saveMessage(from, text, att) {
+            const convs = getConversations();
+            const conv = convs.find(c => c.id === getCurrentConv());
+            if (!conv) return;
+
+            conv.messages.push({
+                from,
+                text,
+                att: att ? { type: att.type, name: att.name, mime: att.mime, data: att.type === 'image' ? att.data : null } : null
+            });
+            conv.updated = Date.now();
+            if (conv.title === 'Nova conversa' && from === 'user' && text) {
+                conv.title = text.length > 40 ? text.slice(0, 40) + '...' : text;
+            }
+            saveConversations(convs);
+        }
+
+        function newConv() {
+            const convs = getConversations();
+            const conv = createConv();
+            convs.push(conv);
+            saveConversations(convs);
+            setCurrentConv(conv.id);
+            document.getElementById('chatBox').innerHTML = '<div class="message msg-ai">Olá! Sou o Nexotizzy AI. Como posso te ajudar com código, estudos ou negócios?</div>';
+            renderHistory();
+            // Vai automaticamente pro chat
+            switchTab('chat', document.querySelector('[data-tab="chat"]'));
+        }
+
+        function loadConv(id) {
+            const conv = getConversations().find(c => c.id === id);
+            if (!conv) return;
+            setCurrentConv(id);
+            document.getElementById('chatBox').innerHTML = '';
+            (conv.messages || []).forEach(m => addMessage(m.from, m.text, m.att, null, true));
+            // Vai automaticamente pro chat
+            switchTab('chat', document.querySelector('[data-tab="chat"]'));
+        }
+
+        function deleteConv(id) {
+            let convs = getConversations();
+            convs = convs.filter(c => c.id !== id);
+            saveConversations(convs);
+            if (getCurrentConv() === id) {
+                const conv = createConv();
+                convs.push(conv);
+                saveConversations(convs);
+                setCurrentConv(conv.id);
+                document.getElementById('chatBox').innerHTML = '<div class="message msg-ai">Olá! Sou o Nexotizzy AI. Como posso te ajudar?</div>';
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const convs = getConversations().sort((a, b) => (b.updated || b.created) - (a.updated || a.created));
+
+            if (convs.length === 0) {
+                list.innerHTML = '<div class="history-empty">Nenhuma conversa salva.</div>';
+                return;
+            }
+
+            list.innerHTML = '';
+            convs.forEach(conv => {
+                const date = new Date(conv.updated || conv.created).toLocaleString('pt-BR');
+                const item = document.createElement('div');
+                item.className = 'history-item';
+
+                let timer = null;
+                const startLongPress = () => {
+                    item.classList.add('holding');
+                    timer = setTimeout(() => deleteConv(conv.id), 3000);
+                };
+                const cancelLongPress = () => {
+                    clearTimeout(timer);
+                    item.classList.remove('holding');
+                };
+
+                item.addEventListener('mousedown', startLongPress);
+                item.addEventListener('touchstart', startLongPress, { passive: true });
+                item.addEventListener('mouseup', cancelLongPress);
+                item.addEventListener('mouseleave', cancelLongPress);
+                item.addEventListener('touchend', cancelLongPress);
+
+                item.innerHTML = `
+                    <div class="history-info" onclick="loadConv('${conv.id}')" style="flex: 1;">
+                        <div class="history-title">${conv.title}</div>
+                        <div class="history-date">${date}</div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function initApp() {
+            const conv = ensureConv();
+            if (conv.messages.length > 0) {
+                document.getElementById('chatBox').innerHTML = '';
+                conv.messages.forEach(m => addMessage(m.from, m.text, m.att, null, true));
+            }
+            renderHistory();
+            renderArcadsVideoList();
+        }
+
+        // ========== BOOT ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            // Login/Signup
+            document.getElementById('btnLogin').addEventListener('click', handleLogin);
+            document.getElementById('btnSignup').addEventListener('click', handleSignup);
+            document.getElementById('btnSendCode').addEventListener('click', handleSendCode);
+            document.getElementById('btnResetPassword').addEventListener('click', handleResetPassword);
+
+            // Chat
+            document.getElementById('btnAttach').addEventListener('click', openFile);
+            document.getElementById('btnCamera').addEventListener('click', openCamera);
+            document.getElementById('btnSend').addEventListener('click', sendMessage);
+            document.getElementById('btnNewConv').addEventListener('click', newConv);
+            document.getElementById('userInput').addEventListener('keypress', handleEnter);
+
+            // Attachments
+            document.getElementById('fileInput').addEventListener('change', handleAttachment);
+            document.getElementById('cameraInput').addEventListener('change', handleAttachment);
+
+            // Close menus
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.header-actions')) {
+                    const headerMenu = document.getElementById('headerMenu');
+                    if (headerMenu) headerMenu.style.display = 'none';
+                }
+            });
+
+            // Check login
+            const user = getCurrentUser();
+            if (user && getAccounts().find(a => a.email === user)) {
+                showApp();
+            } else {
+                showAuth();
+            }
+        });
+
+        window.addEventListener('load', initGoogleSignIn);
+    </script>
+</body>
+</html>
